@@ -7,6 +7,12 @@ require 'set'
 require 'test/unit/assertions'
 require 'json'
 
+puts ''
+puts ''
+puts "I've been included in the harness!!!"
+puts ''
+puts ''
+
 module PuppetDBExtensions
   include Test::Unit::Assertions
 
@@ -427,7 +433,7 @@ module PuppetDBExtensions
     case PuppetDBExtensions.config[:database]
       when :postgres
         if host.is_pe?
-          on host, 'su pe-postgres -c "/opt/puppet/bin/dropdb pe-puppetdb"'
+          on host, 'su pe-postgres -s "/bin/bash" -c "/opt/puppet/bin/dropdb pe-puppetdb"'
         else
           on host, 'su postgres -c "dropdb puppetdb"'
         end
