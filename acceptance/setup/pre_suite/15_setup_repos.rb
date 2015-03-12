@@ -55,8 +55,25 @@ gpgcheck=1
   end
 end
 
+def initialize_aio_repo_on_host(host, os)
+  case os
+  when :debian
+    on host, "wget http://nightlies.puppetlabs.com/puppet-agent-latest/repo_configs/deb/pl-puppet-agent-latest-$(lsb_release -sc).list"
+    on host, "cp pl-puppet-agent-latest-$(lsb_release -sc).list /etc/apt/sources.d/"
+    on host, "apt-get update"
+  when :redhat
+    on host, "wget http://nightlies.puppetlabs.com/puppet-agent-latest/repo_configs/rpm/pl-puppet-agent-latest-#{host['platform']}.repo"
+    on host, "cp pl-puppet-agent-latest-#{host['platform']}.repo /etc/yum/yum.repos.d/"
+    on host, "yum makecache"
+  end
+end
+
 step "Install Puppet Labs repositories" do
   hosts.each do |host|
     initialize_repo_on_host(host, test_config[:os_families][host.name])
+
+    if test_config[:aio_version]
+      initialize_aio_repo_on_host(host, test_config[:os_families][host.name])
+    end
   end
 end
