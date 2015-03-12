@@ -92,6 +92,9 @@ module PuppetDBExtensions
     puppetdb_git_ref = get_option_value(options[:puppetdb_git_ref],
       nil, "git revision of puppetdb to test against", "REF", nil)
 
+    aio_version = get_option_value(options[:aio_version],
+      nil, "The version of puppet-agent to install", "PUPPETDB_AIO_VERSION", nil)
+
     @config = {
       :base_dir => base_dir,
       :acceptance_data_dir => File.join(base_dir, "acceptance", "data"),
@@ -112,6 +115,7 @@ module PuppetDBExtensions
       :repo_hiera => puppetdb_repo_hiera,
       :repo_facter => puppetdb_repo_facter,
       :git_ref => puppetdb_git_ref,
+      :aio_version => aio_version,
     }
 
     pp_config = PP.pp(@config, "")
@@ -889,6 +893,21 @@ EOS
     end
   end
 
+  def install_puppet_from_aio
+    os_families = test_config[:os_families]
+    hosts.each do |host|
+      os = os_families[host.name]
+
+      case os
+      when :debian
+        on host, "apt-get install -y puppet-agent"
+      when :redhat, :fedora
+        on host, "yum install -y puppet-agent"
+      else
+        raise ArgumentError, "Unsupported OS '#{os}'"
+      end
+    end
+  end
   # This helper has been grabbed from beaker, and overriden with the opts
   # component so I can add a new 'refspec' functionality to allow a custom
   # refspec if required.
@@ -998,17 +1017,21 @@ EOS
 
   def install_puppet
     # If our :install_type is :pe then the harness has already installed puppet.
-    case test_config[:install_type]
-    when :package
-      install_puppet_from_package
-      install_puppet_conf
-    when :git
-      if test_config[:repo_puppet] then
-        install_puppet_from_source
-      else
+    if test_config[:aio_version]
+      install_puppet_from_aio
+    else
+      case test_config[:install_type]
+      when :package
         install_puppet_from_package
+        install_puppet_conf
+      when :git
+        if test_config[:repo_puppet] then
+          install_puppet_from_source
+        else
+          install_puppet_from_package
+        end
+        install_puppet_conf
       end
-      install_puppet_conf
     end
   end
 
